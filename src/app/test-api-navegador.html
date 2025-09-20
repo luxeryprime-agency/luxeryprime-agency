@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Prueba de API Híbrida - Luxery Prime Agency</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .test-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        .test-button:hover {
+            background: #45a049;
+        }
+        .test-button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+            background: #f9f9f9;
+        }
+        .error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        .success {
+            border-left-color: #4CAF50;
+            background: #e8f5e8;
+        }
+        .loading {
+            border-left-color: #ff9800;
+            background: #fff3e0;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .summary {
+            background: #e3f2fd;
+            border: 1px solid #2196F3;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🧪 Prueba de API Híbrida</h1>
+        <p>Luxery Prime Agency - Sistema de Gestión de Streamers</p>
+        <p>Google Apps Script + Firestore + Next.js</p>
+    </div>
+
+    <div class="test-section">
+        <h2>🚀 Pruebas de la API</h2>
+        <p>Haz clic en los botones para probar cada endpoint de la API:</p>
+        
+        <button class="test-button" onclick="testHealthCheck()">🏥 Health Check</button>
+        <button class="test-button" onclick="testGetAgencies()">🏢 Get Agencies</button>
+        <button class="test-button" onclick="testGetStreamers()">👥 Get Streamers</button>
+        <button class="test-button" onclick="testGetCommissions()">💰 Get Commissions</button>
+        <button class="test-button" onclick="testUpdateStreamer()">✏️ Update Streamer</button>
+        <button class="test-button" onclick="runAllTests()">🔄 Ejecutar Todas las Pruebas</button>
+        <button class="test-button" onclick="clearResults()">🗑️ Limpiar Resultados</button>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Resultados de las Pruebas</h2>
+        <div id="results"></div>
+    </div>
+
+    <div class="summary" id="summary" style="display: none;">
+        <h2>📈 Resumen de Pruebas</h2>
+        <div id="summaryContent"></div>
+    </div>
+
+    <script>
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxOkgC_boHTVaAFAQQucJ-mXqRoeKMiPwN0W73wxSwLBU6xoi2-vWoc6KAGknS94HmR/exec';
+        let testResults = [];
+
+        function addResult(testName, success, data, error = null) {
+            const result = {
+                test: testName,
+                success: success,
+                data: data,
+                error: error,
+                timestamp: new Date().toLocaleString()
+            };
+            testResults.push(result);
+            displayResult(result);
+            updateSummary();
+        }
+
+        function displayResult(result) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result ${result.success ? 'success' : 'error'}`;
+            
+            const status = result.success ? '✅' : '❌';
+            resultDiv.innerHTML = `
+                <h3>${status} ${result.test}</h3>
+                <p><strong>Timestamp:</strong> ${result.timestamp}</p>
+                ${result.success ? 
+                    `<pre>${JSON.stringify(result.data, null, 2)}</pre>` : 
+                    `<p><strong>Error:</strong> ${result.error}</p>`
+                }
+            `;
+            
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        function updateSummary() {
+            const summaryDiv = document.getElementById('summary');
+            const summaryContent = document.getElementById('summaryContent');
+            
+            const successful = testResults.filter(r => r.success).length;
+            const total = testResults.length;
+            const percentage = total > 0 ? ((successful / total) * 100).toFixed(1) : 0;
+            
+            summaryContent.innerHTML = `
+                <p><strong>Total de pruebas:</strong> ${total}</p>
+                <p><strong>Exitosas:</strong> ${successful}</p>
+                <p><strong>Fallidas:</strong> ${total - successful}</p>
+                <p><strong>Porcentaje de éxito:</strong> ${percentage}%</p>
+                <div style="margin-top: 15px;">
+                    ${testResults.map(r => {
+                        const status = r.success ? '✅' : '❌';
+                        return `<span style="margin-right: 15px;">${status} ${r.test}</span>`;
+                    }).join('')}
+                </div>
+            `;
+            
+            summaryDiv.style.display = 'block';
+        }
+
+        async function makeRequest(endpoint, method = 'GET', data = null) {
+            try {
+                const url = `${API_URL}${endpoint}`;
+                console.log(`🔍 ${method} ${url}`);
+                
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+                
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+                
+                const response = await fetch(url, options);
+                const responseData = await response.json();
+                
+                return {
+                    success: true,
+                    data: responseData
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+
+        async function testHealthCheck() {
+            const result = await makeRequest('?action=health');
+            addResult('Health Check', result.success, result.data, result.error);
+        }
+
+        async function testGetAgencies() {
+            const result = await makeRequest('?action=getAgencies');
+            addResult('Get Agencies', result.success, result.data, result.error);
+        }
+
+        async function testGetStreamers() {
+            const result = await makeRequest('?action=getStreamers');
+            addResult('Get Streamers', result.success, result.data, result.error);
+        }
+
+        async function testGetCommissions() {
+            const result = await makeRequest('?action=getCommissions');
+            addResult('Get Commissions', result.success, result.data, result.error);
+        }
+
+        async function testUpdateStreamer() {
+            const updateData = {
+                streamerId: 'STR001',
+                data: {
+                    name: 'Juan Pérez Actualizado',
+                    level: 2,
+                    commission: 0.20
+                }
+            };
+            
+            const result = await makeRequest('?action=updateStreamer', 'POST', updateData);
+            addResult('Update Streamer', result.success, result.data, result.error);
+        }
+
+        async function runAllTests() {
+            clearResults();
+            
+            const tests = [
+                { name: 'Health Check', fn: testHealthCheck },
+                { name: 'Get Agencies', fn: testGetAgencies },
+                { name: 'Get Streamers', fn: testGetStreamers },
+                { name: 'Get Commissions', fn: testGetCommissions },
+                { name: 'Update Streamer', fn: testUpdateStreamer }
+            ];
+            
+            for (const test of tests) {
+                await test.fn();
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Pausa de 1 segundo
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('summary').style.display = 'none';
+            testResults = [];
+        }
+
+        // Cargar automáticamente al abrir la página
+        window.onload = function() {
+            console.log('🧪 Página de pruebas cargada');
+            console.log('🔗 API URL:', API_URL);
+        };
+    </script>
+</body>
+</html>
